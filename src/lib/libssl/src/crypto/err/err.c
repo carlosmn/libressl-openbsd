@@ -290,10 +290,7 @@ err_fns_check(void)
 	if (err_fns)
 		return;
 
-	CRYPTO_w_lock(CRYPTO_LOCK_ERR);
-	if (!err_fns)
-		err_fns = &err_defaults;
-	CRYPTO_w_unlock(CRYPTO_LOCK_ERR);
+	__sync_val_compare_and_swap(&err_fns, NULL, &err_defaults);
 }
 
 /* API functions to get or set the underlying ERR functions. */
@@ -308,17 +305,7 @@ ERR_get_implementation(void)
 int
 ERR_set_implementation(const ERR_FNS *fns)
 {
-	int ret = 0;
-
-	CRYPTO_w_lock(CRYPTO_LOCK_ERR);
-	/* It's too late if 'err_fns' is non-NULL. BTW: not much point setting
-	 * an error is there?! */
-	if (!err_fns) {
-		err_fns = fns;
-		ret = 1;
-	}
-	CRYPTO_w_unlock(CRYPTO_LOCK_ERR);
-	return ret;
+	return __sync_bool_compare_and_swap(&err_fns, NULL, fns);
 }
 
 /* These are the callbacks provided to "lh_new()" when creating the LHASH tables
@@ -368,12 +355,11 @@ LHASH_OF(ERR_STRING_DATA) *int_err_get(int create)
 static void
 int_err_del(void)
 {
-	CRYPTO_w_lock(CRYPTO_LOCK_ERR);
-	if (int_error_hash) {
-		lh_ERR_STRING_DATA_free(int_error_hash);
-		int_error_hash = NULL;
-	}
-	CRYPTO_w_unlock(CRYPTO_LOCK_ERR);
+	LHASH_OF(ERR_STRING_DATA) *oldval;
+
+	oldval = __sync_lock_test_and_set(&int_error_hash, NULL);
+	if (oldval)
+		lh_ERR_STRING_DATA_free(oldval);
 }
 
 static ERR_STRING_DATA *
@@ -545,13 +531,7 @@ int_thread_del_item(const ERR_STATE *d)
 static int
 int_err_get_next_lib(void)
 {
-	int ret;
-
-	CRYPTO_w_lock(CRYPTO_LOCK_ERR);
-	ret = int_err_library_number++;
-	CRYPTO_w_unlock(CRYPTO_LOCK_ERR);
-
-	return ret;
+	return __sync_fetch_and_add(&int_err_library_number, 1);
 }
 
 
