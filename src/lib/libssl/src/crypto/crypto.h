@@ -212,15 +212,12 @@ typedef struct openssl_item_st {
 	CRYPTO_lock(CRYPTO_LOCK|CRYPTO_READ,type,__FILE__,__LINE__)
 #define CRYPTO_r_unlock(type)	\
 	CRYPTO_lock(CRYPTO_UNLOCK|CRYPTO_READ,type,__FILE__,__LINE__)
-#define CRYPTO_add(addr,amount,type)	\
-	CRYPTO_add_lock(addr,amount,type,__FILE__,__LINE__)
 #endif
 #else
 #define CRYPTO_w_lock(a)
 #define CRYPTO_w_unlock(a)
 #define CRYPTO_r_lock(a)
 #define CRYPTO_r_unlock(a)
-#define CRYPTO_add(a,b,c)	((*(a))+=(b))
 #endif
 
 int CRYPTO_refcount_inc(int *count);
@@ -414,8 +411,6 @@ unsigned long CRYPTO_thread_id(void);
 #endif
 
 const char *CRYPTO_get_lock_name(int type);
-int CRYPTO_add_lock(int *pointer, int amount, int type, const char *file,
-    int line);
 
 int CRYPTO_get_new_dynlockid(void);
 void CRYPTO_destroy_dynlockid(int i);
