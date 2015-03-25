@@ -460,8 +460,7 @@ ssl_get_prev_session(SSL *s, unsigned char *session_id, int len,
 		ret = lh_SSL_SESSION_retrieve(s->session_ctx->sessions, &data);
 		if (ret != NULL) {
 			/* Don't allow other threads to steal it. */
-			CRYPTO_add(&ret->references, 1,
-			    CRYPTO_LOCK_SSL_SESSION);
+			CRYPTO_reference_inc(&ret->references);
 		}
 		CRYPTO_r_unlock(CRYPTO_LOCK_SSL_CTX);
 
@@ -486,8 +485,7 @@ ssl_get_prev_session(SSL *s, unsigned char *session_id, int len,
 			 * thread-safe).
 			 */
 			if (copy)
-				CRYPTO_add(&ret->references, 1,
-				    CRYPTO_LOCK_SSL_SESSION);
+				CRYPTO_reference_inc(&ret->references);
 
 			/*
 			 * Add the externally cached session to the internal

@@ -217,8 +217,7 @@ X509_verify_cert(X509_STORE_CTX *ctx)
 					    ERR_R_MALLOC_FAILURE);
 					goto end;
 				}
-				CRYPTO_add(&xtmp->references, 1,
-				    CRYPTO_LOCK_X509);
+				CRYPTO_refcount_inc(&xtmp->references);
 				(void)sk_X509_delete_ptr(sktmp, xtmp);
 				ctx->last_untrusted++;
 				x = xtmp;
