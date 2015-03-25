@@ -113,11 +113,16 @@ asn1_do_lock(ASN1_VALUE **pval, int op, const ASN1_ITEM *it)
 		return 0;
 	lck = offset2ptr(*pval, aux->ref_offset);
 	if (op == 0) {
-		*lck = 1;
+		CRYPTO_refcount_set(lck, 1);
 		return 1;
 	}
-	ret = CRYPTO_add(lck, op, aux->ref_lock);
-	return ret;
+
+	if (op == 1)
+		return CRYPTO_refcount_inc(lck);
+	else if (op == -1)
+		return CRYPTO_refcount_dec(lck);
+	else
+		abort();
 }
 
 static ASN1_ENCODING *

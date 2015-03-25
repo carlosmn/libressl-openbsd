@@ -127,7 +127,7 @@ ec_pre_comp_dup(void *src_)
 
 	/* no need to actually copy, these objects never change! */
 
-	CRYPTO_add(&src->references, 1, CRYPTO_LOCK_EC_PRE_COMP);
+	CRYPTO_refcount_inc(&src->references);
 
 	return src_;
 }
@@ -141,7 +141,7 @@ ec_pre_comp_free(void *pre_)
 	if (!pre)
 		return;
 
-	i = CRYPTO_add(&pre->references, -1, CRYPTO_LOCK_EC_PRE_COMP);
+	i = CRYPTO_refcount_dec(&pre->references);
 	if (i > 0)
 		return;
 
@@ -164,7 +164,7 @@ ec_pre_comp_clear_free(void *pre_)
 	if (!pre)
 		return;
 
-	i = CRYPTO_add(&pre->references, -1, CRYPTO_LOCK_EC_PRE_COMP);
+	i = CRYPTO_refcount_dec(&pre->references);
 	if (i > 0)
 		return;
 

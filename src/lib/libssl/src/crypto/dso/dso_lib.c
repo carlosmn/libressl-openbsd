@@ -143,7 +143,7 @@ DSO_free(DSO *dso)
 		return (0);
 	}
 
-	i = CRYPTO_add(&dso->references, -1, CRYPTO_LOCK_DSO);
+	i = CRYPTO_refcount_dec(&dso->references);
 	if (i > 0)
 		return (1);
 
@@ -179,7 +179,7 @@ DSO_up_ref(DSO *dso)
 		return (0);
 	}
 
-	CRYPTO_add(&dso->references, 1, CRYPTO_LOCK_DSO);
+	CRYPTO_refcount_inc(&dso->references);
 	return (1);
 }
 

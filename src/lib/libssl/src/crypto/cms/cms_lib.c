@@ -468,7 +468,7 @@ CMS_add1_cert(CMS_ContentInfo *cms, X509 *cert)
 
 	r = CMS_add0_cert(cms, cert);
 	if (r > 0)
-		CRYPTO_add(&cert->references, 1, CRYPTO_LOCK_X509);
+		CRYPTO_refcount_inc(&cert->references);
 	return r;
 }
 
@@ -530,7 +530,7 @@ CMS_add1_crl(CMS_ContentInfo *cms, X509_CRL *crl)
 
 	r = CMS_add0_crl(cms, crl);
 	if (r > 0)
-		CRYPTO_add(&crl->references, 1, CRYPTO_LOCK_X509_CRL);
+		CRYPTO_refcount_inc(&crl->references);
 	return r;
 }
 
@@ -556,8 +556,7 @@ STACK_OF(X509) *CMS_get1_certs(CMS_ContentInfo *cms)
 				sk_X509_pop_free(certs, X509_free);
 				return NULL;
 			}
-			CRYPTO_add(&cch->d.certificate->references,
-			    1, CRYPTO_LOCK_X509);
+			CRYPTO_refcount_inc(&cch->d.certificate->references);
 		}
 	}
 	return certs;
@@ -586,8 +585,7 @@ STACK_OF(X509_CRL) *CMS_get1_crls(CMS_ContentInfo *cms)
 				sk_X509_CRL_pop_free(crls, X509_CRL_free);
 				return NULL;
 			}
-			CRYPTO_add(&rch->d.crl->references,
-			    1, CRYPTO_LOCK_X509_CRL);
+			CRYPTO_refcount_inc(&rch->d.crl->references);
 		}
 	}
 	return crls;

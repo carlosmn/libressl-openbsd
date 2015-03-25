@@ -143,7 +143,7 @@ X509_PKEY_free(X509_PKEY *x)
 	if (x == NULL)
 		return;
 
-	i = CRYPTO_add(&x->references, -1, CRYPTO_LOCK_X509_PKEY);
+	i = CRYPTO_refcount_dec(&x->references);
 	if (i > 0)
 		return;
 

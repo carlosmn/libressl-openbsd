@@ -302,8 +302,8 @@ CMS_add1_signer(CMS_ContentInfo *cms, X509 *signer, EVP_PKEY *pk,
 		goto merr;
 	X509_check_purpose(signer, -1, -1);
 
-	CRYPTO_add(&pk->references, 1, CRYPTO_LOCK_EVP_PKEY);
-	CRYPTO_add(&signer->references, 1, CRYPTO_LOCK_X509);
+	CRYPTO_refcount_inc(&pk->references);
+	CRYPTO_refcount_inc(&signer->references);
 
 	si->pkey = pk;
 	si->signer = signer;
@@ -494,7 +494,7 @@ void
 CMS_SignerInfo_set1_signer_cert(CMS_SignerInfo *si, X509 *signer)
 {
 	if (signer) {
-		CRYPTO_add(&signer->references, 1, CRYPTO_LOCK_X509);
+		CRYPTO_refcount_inc(&signer->references);
 		EVP_PKEY_free(si->pkey);
 		si->pkey = X509_get_pubkey(signer);
 	}

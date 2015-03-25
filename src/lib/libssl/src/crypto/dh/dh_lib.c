@@ -182,7 +182,7 @@ DH_free(DH *r)
 
 	if (r == NULL)
 		return;
-	i = CRYPTO_add(&r->references, -1, CRYPTO_LOCK_DH);
+	i = CRYPTO_refcount_dec(&r->references);
 	if (i > 0)
 		return;
 
@@ -209,7 +209,7 @@ DH_free(DH *r)
 int
 DH_up_ref(DH *r)
 {
-	int i = CRYPTO_add(&r->references, 1, CRYPTO_LOCK_DH);
+	int i = CRYPTO_refcount_inc(&r->references);
 
 	return i > 1 ? 1 : 0;
 }

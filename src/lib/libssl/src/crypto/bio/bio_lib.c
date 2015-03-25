@@ -116,7 +116,7 @@ BIO_free(BIO *a)
 	if (a == NULL)
 		return (0);
 
-	i = CRYPTO_add(&a->references, -1, CRYPTO_LOCK_BIO);
+	i = CRYPTO_refcount_dec(&a->references);
 	if (i > 0)
 		return (1);
 	if ((a->callback != NULL) &&
