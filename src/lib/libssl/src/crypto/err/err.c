@@ -471,7 +471,7 @@ int_thread_release(LHASH_OF(ERR_STATE) **hash)
 	if (hash == NULL || *hash == NULL)
 		return;
 
-	i = CRYPTO_add(&int_thread_hash_references, -1, CRYPTO_LOCK_ERR);
+	i = CRYPTO_reference_dec(&int_thread_hash_references);
 	if (i > 0)
 		return;
 

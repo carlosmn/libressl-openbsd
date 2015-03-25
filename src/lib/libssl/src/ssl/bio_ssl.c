@@ -388,7 +388,7 @@ ssl_ctrl(BIO *b, int cmd, long num, void *ptr)
 			if (ssl->rbio != ssl->wbio)
 				BIO_free_all(ssl->wbio);
 			if (b->next_bio != NULL)
-				CRYPTO_add(&b->next_bio->references, -1, CRYPTO_LOCK_BIO);
+				CRYPTO_reference_dec(&b->next_bio->references);
 			ssl->wbio = NULL;
 			ssl->rbio = NULL;
 		}

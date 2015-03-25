@@ -325,7 +325,7 @@ ssl_cert_free(CERT *c)
 	if (c == NULL)
 		return;
 
-	i = CRYPTO_add(&c->references, -1, CRYPTO_LOCK_SSL_CERT);
+	i = CRYPTO_reference_dec(&c->references);
 	if (i > 0)
 		return;
 
@@ -393,7 +393,7 @@ ssl_sess_cert_free(SESS_CERT *sc)
 	if (sc == NULL)
 		return;
 
-	i = CRYPTO_add(&sc->references, -1, CRYPTO_LOCK_SSL_SESS_CERT);
+	i = CRYPTO_reference_dec(&sc->references);
 	if (i > 0)
 		return;
 

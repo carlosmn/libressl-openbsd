@@ -204,7 +204,7 @@ RSA_free(RSA *r)
 	if (r == NULL)
 		return;
 
-	i = CRYPTO_add(&r->references, -1, CRYPTO_LOCK_RSA);
+	i = CRYPTO_reference_dec(&r->references);
 	if (i > 0)
 		return;
 

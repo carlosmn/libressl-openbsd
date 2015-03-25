@@ -691,7 +691,7 @@ SSL_SESSION_free(SSL_SESSION *ss)
 	if (ss == NULL)
 		return;
 
-	i = CRYPTO_add(&ss->references, -1, CRYPTO_LOCK_SSL_SESSION);
+	i = CRYPTO_reference_dec(&ss->references);
 	if (i > 0)
 		return;
 

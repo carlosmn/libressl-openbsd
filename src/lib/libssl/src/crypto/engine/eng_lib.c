@@ -118,7 +118,7 @@ engine_free_util(ENGINE *e, int locked)
 		return 0;
 	}
 	if (locked)
-		i = CRYPTO_add(&e->struct_ref, -1, CRYPTO_LOCK_ENGINE);
+		i = CRYPTO_reference_dec(&e->struct_ref);
 	else
 		i = --e->struct_ref;
 	engine_ref_debug(e, 0, -1)

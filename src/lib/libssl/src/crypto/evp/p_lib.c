@@ -409,7 +409,7 @@ EVP_PKEY_free(EVP_PKEY *x)
 	if (x == NULL)
 		return;
 
-	i = CRYPTO_add(&x->references, -1, CRYPTO_LOCK_EVP_PKEY);
+	i = CRYPTO_reference_dec(&x->references);
 	if (i > 0)
 		return;
 

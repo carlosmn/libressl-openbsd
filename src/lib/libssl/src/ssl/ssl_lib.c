@@ -494,7 +494,7 @@ SSL_free(SSL *s)
 	if (s == NULL)
 		return;
 
-	i = CRYPTO_add(&s->references, -1, CRYPTO_LOCK_SSL);
+	i = CRYPTO_reference_dec(&s->references);
 	if (i > 0)
 		return;
 
@@ -1941,7 +1941,7 @@ SSL_CTX_free(SSL_CTX *a)
 	if (a == NULL)
 		return;
 
-	i = CRYPTO_add(&a->references, -1, CRYPTO_LOCK_SSL_CTX);
+	i = CRYPTO_reference_dec(&a->references);
 	if (i > 0)
 		return;
 
