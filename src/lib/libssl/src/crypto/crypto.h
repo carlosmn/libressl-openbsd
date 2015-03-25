@@ -223,6 +223,10 @@ typedef struct openssl_item_st {
 #define CRYPTO_add(a,b,c)	((*(a))+=(b))
 #endif
 
+int CRYPTO_refcount_inc(int *count);
+int CRYPTO_refcount_dec(int *count);
+void CRYPTO_refcount_set(int *count, int val)
+
 /* Some applications as well as some parts of OpenSSL need to allocate
    and deallocate locks in a dynamic fashion.  The following typedef
    makes this possible in a type-safe manner.  */

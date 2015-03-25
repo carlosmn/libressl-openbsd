@@ -567,6 +567,24 @@ CRYPTO_lock(int mode, int type, const char *file, int line)
 }
 
 int
+CRYPTO_refcount_inc(int *count)
+{
+	return __sync_add_and_fetch(count, 1);
+}
+
+int
+CRYPTO_refcount_dec(int *count)
+{
+	return __sync_sub_and_fetch(count, 1);
+}
+
+void
+CRYPTO_refcount_set(int *count, int val)
+{
+	__sync_lock_test_and_set(count, val);
+}
+
+int
 CRYPTO_add_lock(int *pointer, int amount, int type, const char *file,
     int line)
 {
