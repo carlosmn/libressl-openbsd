@@ -586,7 +586,7 @@ SSL_CTX_add_session(SSL_CTX *ctx, SSL_SESSION *c)
 	 * even though it has two ways of access: each session is in a
 	 * doubly linked list and an lhash.
 	 */
-	CRYPTO_add(&c->references, 1, CRYPTO_LOCK_SSL_SESSION);
+	CRYPTO_reference_inc(&c->references);
 
 	/*
 	 * If session c is in already in cache, we take back the increment
@@ -738,7 +738,7 @@ SSL_set_session(SSL *s, SSL_SESSION *session)
 
 
 		/* CRYPTO_w_lock(CRYPTO_LOCK_SSL);*/
-		CRYPTO_add(&session->references, 1, CRYPTO_LOCK_SSL_SESSION);
+		CRYPTO_reference_inc(&session->references);
 		if (s->session != NULL)
 			SSL_SESSION_free(s->session);
 		s->session = session;

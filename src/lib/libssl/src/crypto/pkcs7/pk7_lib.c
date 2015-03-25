@@ -321,7 +321,7 @@ PKCS7_add_certificate(PKCS7 *p7, X509 *x509)
 		PKCS7err(PKCS7_F_PKCS7_ADD_CERTIFICATE, ERR_R_MALLOC_FAILURE);
 		return 0;
 	}
-	CRYPTO_add(&x509->references, 1, CRYPTO_LOCK_X509);
+	CRYPTO_reference_inc(&x509->references);
 	if (!sk_X509_push(*sk, x509)) {
 		X509_free(x509);
 		return 0;
@@ -355,7 +355,7 @@ PKCS7_add_crl(PKCS7 *p7, X509_CRL *crl)
 		return 0;
 	}
 
-	CRYPTO_add(&crl->references, 1, CRYPTO_LOCK_X509_CRL);
+	CRYPTO_reference_inc(&crl->references);
 	if (!sk_X509_CRL_push(*sk, crl)) {
 		X509_CRL_free(crl);
 		return 0;
@@ -384,7 +384,7 @@ PKCS7_SIGNER_INFO_set(PKCS7_SIGNER_INFO *p7i, X509 *x509, EVP_PKEY *pkey,
 		goto err;
 
 	/* lets keep the pkey around for a while */
-	CRYPTO_add(&pkey->references, 1, CRYPTO_LOCK_EVP_PKEY);
+	CRYPTO_reference_inc(&pkey->references);
 	p7i->pkey = pkey;
 
 	/* Set the algorithms */
@@ -571,7 +571,7 @@ PKCS7_RECIP_INFO_set(PKCS7_RECIP_INFO *p7i, X509 *x509)
 
 	EVP_PKEY_free(pkey);
 
-	CRYPTO_add(&x509->references, 1, CRYPTO_LOCK_X509);
+	CRYPTO_reference_inc(&x509->references);
 	p7i->cert = x509;
 
 	return 1;

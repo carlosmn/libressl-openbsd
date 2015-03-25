@@ -180,7 +180,7 @@ X509_verify_cert(X509_STORE_CTX *ctx)
 			X509err(X509_F_X509_VERIFY_CERT, ERR_R_MALLOC_FAILURE);
 			goto end;
 		}
-		CRYPTO_add(&ctx->cert->references, 1, CRYPTO_LOCK_X509);
+		CRYPTO_reference_inc(&ctx->cert->references);
 		ctx->last_untrusted = 1;
 	}
 
@@ -441,7 +441,7 @@ get_issuer_sk(X509 **issuer, X509_STORE_CTX *ctx, X509 *x)
 {
 	*issuer = find_issuer(ctx, ctx->other_ctx, x);
 	if (*issuer) {
-		CRYPTO_add(&(*issuer)->references, 1, CRYPTO_LOCK_X509);
+		CRYPTO_reference_inc(&(*issuer)->references);
 		return 1;
 	} else
 		return 0;
@@ -849,7 +849,7 @@ get_crl_sk(X509_STORE_CTX *ctx, X509_CRL **pcrl, X509_CRL **pdcrl,
 		*pissuer = best_crl_issuer;
 		*pscore = best_score;
 		*preasons = best_reasons;
-		CRYPTO_add(&best_crl->references, 1, CRYPTO_LOCK_X509_CRL);
+		CRYPTO_reference_inc(&best_crl->references);
 		if (*pdcrl) {
 			X509_CRL_free(*pdcrl);
 			*pdcrl = NULL;
@@ -952,7 +952,7 @@ get_delta_sk(X509_STORE_CTX *ctx, X509_CRL **dcrl, int *pscore, X509_CRL *base,
 		if (check_delta_base(delta, base)) {
 			if (check_crl_time(ctx, delta, 0))
 				*pscore |= CRL_SCORE_TIME_DELTA;
-			CRYPTO_add(&delta->references, 1, CRYPTO_LOCK_X509_CRL);
+			CRYPTO_reference_inc(&delta->references);
 			*dcrl = delta;
 			return;
 		}
@@ -1846,7 +1846,7 @@ STACK_OF(X509) *X509_STORE_CTX_get1_chain(X509_STORE_CTX *ctx)
 		return NULL;
 	for (i = 0; i < sk_X509_num(chain); i++) {
 		x = sk_X509_value(chain, i);
-		CRYPTO_add(&x->references, 1, CRYPTO_LOCK_X509);
+		CRYPTO_reference_inc(&x->references);
 	}
 	return chain;
 }

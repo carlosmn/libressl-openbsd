@@ -240,7 +240,7 @@ tree_init(X509_POLICY_TREE **ptree, STACK_OF(X509) *certs, unsigned int flags)
 		level++;
 		x = sk_X509_value(certs, i);
 		cache = policy_cache_set(x);
-		CRYPTO_add(&x->references, 1, CRYPTO_LOCK_X509);
+		CRYPTO_reference_inc(&x->references);
 		level->cert = x;
 
 		if (!cache->anyPolicy)

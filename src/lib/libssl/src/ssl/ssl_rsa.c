@@ -206,7 +206,7 @@ ssl_set_pkey(CERT *c, EVP_PKEY *pkey)
 	}
 
 	EVP_PKEY_free(c->pkeys[i].privatekey);
-	CRYPTO_add(&pkey->references, 1, CRYPTO_LOCK_EVP_PKEY);
+	CRYPTO_reference_inc(&pkey->references);
 	c->pkeys[i].privatekey = pkey;
 	c->key = &(c->pkeys[i]);
 
@@ -411,7 +411,7 @@ ssl_set_cert(CERT *c, X509 *x)
 
 	if (c->pkeys[i].x509 != NULL)
 		X509_free(c->pkeys[i].x509);
-	CRYPTO_add(&x->references, 1, CRYPTO_LOCK_X509);
+	CRYPTO_reference_inc(&x->references);
 	c->pkeys[i].x509 = x;
 	c->key = &(c->pkeys[i]);
 

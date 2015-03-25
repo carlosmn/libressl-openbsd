@@ -419,6 +419,6 @@ ENGINE_up_ref(ENGINE *e)
 		ENGINEerr(ENGINE_F_ENGINE_UP_REF, ERR_R_PASSED_NULL_PARAMETER);
 		return 0;
 	}
-	CRYPTO_add(&e->struct_ref, 1, CRYPTO_LOCK_ENGINE);
+	CRYPTO_reference_inc(&e->struct_ref);
 	return 1;
 }

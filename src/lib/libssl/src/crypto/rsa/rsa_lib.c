@@ -233,7 +233,7 @@ RSA_free(RSA *r)
 int
 RSA_up_ref(RSA *r)
 {
-	int i = CRYPTO_add(&r->references, 1, CRYPTO_LOCK_RSA);
+	int i = CRYPTO_reference_inc(&r->references);
 	return i > 1 ? 1 : 0;
 }
 

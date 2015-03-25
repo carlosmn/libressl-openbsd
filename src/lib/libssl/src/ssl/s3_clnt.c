@@ -1112,7 +1112,7 @@ ssl3_get_server_certificate(SSL *s)
 	}
 
 	sc->peer_cert_type = i;
-	CRYPTO_add(&x->references, 1, CRYPTO_LOCK_X509);
+	CRYPTO_reference_inc(&x->references);
 	/*
 	 * Why would the following ever happen?
 	 * We just created sc a couple of lines ago.
@@ -1124,7 +1124,7 @@ ssl3_get_server_certificate(SSL *s)
 
 	if (s->session->peer != NULL)
 		X509_free(s->session->peer);
-	CRYPTO_add(&x->references, 1, CRYPTO_LOCK_X509);
+	CRYPTO_reference_inc(&x->references);
 	s->session->peer = x;
 	s->session->verify_result = s->verify_result;
 

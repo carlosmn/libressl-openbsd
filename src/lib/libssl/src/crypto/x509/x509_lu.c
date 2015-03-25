@@ -412,10 +412,10 @@ X509_OBJECT_up_ref_count(X509_OBJECT *a)
 {
 	switch (a->type) {
 	case X509_LU_X509:
-		CRYPTO_add(&a->data.x509->references, 1, CRYPTO_LOCK_X509);
+		CRYPTO_reference_inc(&a->data.x509->references);
 		break;
 	case X509_LU_CRL:
-		CRYPTO_add(&a->data.crl->references, 1, CRYPTO_LOCK_X509_CRL);
+		CRYPTO_reference_inc(&a->data.crl->references);
 		break;
 	}
 }
@@ -531,7 +531,7 @@ X509_STORE_get1_certs(X509_STORE_CTX *ctx, X509_NAME *nm)
 	for (i = 0; i < cnt; i++, idx++) {
 		obj = sk_X509_OBJECT_value(ctx->ctx->objs, idx);
 		x = obj->data.x509;
-		CRYPTO_add(&x->references, 1, CRYPTO_LOCK_X509);
+		CRYPTO_reference_inc(&x->references);
 		if (!sk_X509_push(sk, x)) {
 			CRYPTO_w_unlock(CRYPTO_LOCK_X509_STORE);
 			X509_free(x);
@@ -578,7 +578,7 @@ X509_STORE_get1_crls(X509_STORE_CTX *ctx, X509_NAME *nm)
 	for (i = 0; i < cnt; i++, idx++) {
 		obj = sk_X509_OBJECT_value(ctx->ctx->objs, idx);
 		x = obj->data.crl;
-		CRYPTO_add(&x->references, 1, CRYPTO_LOCK_X509_CRL);
+		CRYPTO_reference_inc(&x->references);
 		if (!sk_X509_CRL_push(sk, x)) {
 			CRYPTO_w_unlock(CRYPTO_LOCK_X509_STORE);
 			X509_CRL_free(x);
@@ -692,7 +692,7 @@ X509_STORE_CTX_get1_issuer(X509 **issuer, X509_STORE_CTX *ctx, X509 *x)
 	}
 	CRYPTO_w_unlock(CRYPTO_LOCK_X509_STORE);
 	if (*issuer)
-		CRYPTO_add(&(*issuer)->references, 1, CRYPTO_LOCK_X509);
+		CRYPTO_reference_inc(&(*issuer)->references);
 	return ret;
 }
 

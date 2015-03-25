@@ -321,7 +321,7 @@ SSL_new(SSL_CTX *ctx)
 	s->quiet_shutdown = ctx->quiet_shutdown;
 	s->max_send_fragment = ctx->max_send_fragment;
 
-	CRYPTO_add(&ctx->references, 1, CRYPTO_LOCK_SSL_CTX);
+	CRYPTO_reference_inc(&ctx->references);
 	s->ctx = ctx;
 	s->tlsext_debug_cb = 0;
 	s->tlsext_debug_arg = NULL;
@@ -332,7 +332,7 @@ SSL_new(SSL_CTX *ctx)
 	s->tlsext_ocsp_exts = NULL;
 	s->tlsext_ocsp_resp = NULL;
 	s->tlsext_ocsp_resplen = -1;
-	CRYPTO_add(&ctx->references, 1, CRYPTO_LOCK_SSL_CTX);
+	CRYPTO_reference_inc(&ctx->references);
 	s->initial_ctx = ctx;
 	s->next_proto_negotiated = NULL;
 
@@ -821,7 +821,7 @@ SSL_get_peer_certificate(const SSL *s)
 	if (r == NULL)
 		return (r);
 
-	CRYPTO_add(&r->references, 1, CRYPTO_LOCK_X509);
+	CRYPTO_reference_inc(&r->references);
 
 	return (r);
 }
@@ -869,7 +869,7 @@ SSL_copy_session_id(SSL *t, const SSL *f)
 
 	tmp = t->cert;
 	if (f->cert != NULL) {
-		CRYPTO_add(&f->cert->references, 1, CRYPTO_LOCK_SSL_CERT);
+		CRYPTO_reference_inc(&f->cert->references);
 		t->cert = f->cert;
 	} else
 		t->cert = NULL;
@@ -2333,7 +2333,7 @@ ssl_update_cache(SSL *s, int mode)
 	if ((i & mode) && (!s->hit) && ((i & SSL_SESS_CACHE_NO_INTERNAL_STORE)
 	    || SSL_CTX_add_session(s->session_ctx, s->session))
 	    && (s->session_ctx->new_session_cb != NULL)) {
-		CRYPTO_add(&s->session->references, 1, CRYPTO_LOCK_SSL_SESSION);
+		CRYPTO_reference_inc(&s->session->references);
 		if (!s->session_ctx->new_session_cb(s, s->session))
 			SSL_SESSION_free(s->session);
 	}
@@ -2893,7 +2893,7 @@ SSL_set_SSL_CTX(SSL *ssl, SSL_CTX* ctx)
 	if (ssl->cert != NULL)
 		ssl_cert_free(ssl->cert);
 	ssl->cert = ssl_cert_dup(ctx->cert);
-	CRYPTO_add(&ctx->references, 1, CRYPTO_LOCK_SSL_CTX);
+	CRYPTO_reference_inc(&ctx->references);
 	SSL_CTX_free(ssl->ctx); /* decrement reference count */
 	ssl->ctx = ctx;
 	return (ssl->ctx);
