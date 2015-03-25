@@ -185,10 +185,6 @@ static STACK_OF(OPENSSL_STRING) *app_locks = NULL;
    numbers.  */
 static STACK_OF(CRYPTO_dynlock) *dyn_locks = NULL;
 
-static void (*locking_callback)(int mode, int type,
-    const char *file, int line) = 0;
-static int (*add_lock_callback)(int *pointer, int amount,
-    int type, const char *file, int line) = 0;
 #ifndef OPENSSL_NO_DEPRECATED
 static unsigned long (*id_callback)(void) = 0;
 #endif
@@ -388,32 +384,28 @@ void
 (*CRYPTO_get_locking_callback(void))(int mode, int type, const char *file,
     int line)
 {
-	return (locking_callback);
+	return NULL;
 }
 
 int
 (*CRYPTO_get_add_lock_callback(void))(int *num, int mount, int type,
     const char *file, int line)
 {
-	return (add_lock_callback);
+	return NULL;
 }
 
 void
 CRYPTO_set_locking_callback(void (*func)(int mode, int type,
     const char *file, int line))
 {
-	/* Calling this here ensures initialisation before any threads
-	 * are started.
-	 */
-	OPENSSL_init();
-	locking_callback = func;
+	/* NOP */
 }
 
 void
 CRYPTO_set_add_lock_callback(int (*func)(int *num, int mount, int type,
     const char *file, int line))
 {
-	add_lock_callback = func;
+	/* NOP */
 }
 
 /* the memset() here and in set_pointer() seem overkill, but for the sake of
@@ -523,6 +515,21 @@ CRYPTO_thread_id(void)
 }
 #endif
 
+static int crypto_spinlocks[CRYPTO_NUM_LOCKS];
+
+static void
+spinlock_lock(int *lock)
+{
+	/* Loop while we get that the lock was set */
+	while (__sync_lock_test_and_set(lock, 1));
+}
+
+static void
+spinlock_unlock(int *lock)
+{
+	__sync_lock_release(lock);
+}
+
 void
 CRYPTO_lock(int mode, int type, const char *file, int line)
 {
@@ -562,49 +569,19 @@ CRYPTO_lock(int mode, int type, const char *file, int line)
 
 			CRYPTO_destroy_dynlockid(type);
 		}
-	} else if (locking_callback != NULL)
-		locking_callback(mode, type, file, line);
+	} else {
+		if (mode & CRYPTO_LOCK)
+			spinlock_lock(&crypto_spinlocks[type]);
+		else
+			spinlock_unlock(&crypto_spinlocks[type]);
+	}
 }
 
 int
 CRYPTO_add_lock(int *pointer, int amount, int type, const char *file,
     int line)
 {
-	int ret = 0;
-
-	if (add_lock_callback != NULL) {
-#ifdef LOCK_DEBUG
-		int before= *pointer;
-#endif
-
-		ret = add_lock_callback(pointer, amount, type, file, line);
-#ifdef LOCK_DEBUG
-		{
-			CRYPTO_THREADID id;
-			CRYPTO_THREADID_current(&id);
-			fprintf(stderr, "ladd:%08lx:%2d+%2d->%2d %-18s %s:%d\n",
-			    CRYPTO_THREADID_hash(&id), before, amount, ret,
-			    CRYPTO_get_lock_name(type),
-			    file, line);
-		}
-#endif
-	} else {
-		CRYPTO_lock(CRYPTO_LOCK|CRYPTO_WRITE, type, file, line);
-
-		ret= *pointer + amount;
-#ifdef LOCK_DEBUG
-		{
-			CRYPTO_THREADID id;
-			CRYPTO_THREADID_current(&id);
-			fprintf(stderr, "ladd:%08lx:%2d+%2d->%2d %-18s %s:%d\n",
-			    CRYPTO_THREADID_hash(&id), *pointer, amount, ret,
-			    CRYPTO_get_lock_name(type), file, line);
-		}
-#endif
-		*pointer = ret;
-		CRYPTO_lock(CRYPTO_UNLOCK|CRYPTO_WRITE, type, file, line);
-	}
-	return (ret);
+	return __sync_add_and_fetch(pointer, amount);
 }
 
 const char *
