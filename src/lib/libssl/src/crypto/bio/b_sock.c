@@ -213,12 +213,10 @@ BIO_get_accept_socket(char *host, int bind_mode)
 		struct sockaddr_in6 sa_in6;
 	} server, client;
 	int s = -1, cs, addrlen;
-	unsigned char ip[4];
-	unsigned short port;
 	char *str = NULL, *e;
 	char *h, *p;
-	unsigned long l;
 	int err_num;
+	struct addrinfo *res, hint;
 
 	if (host == NULL || (str = strdup(host)) == NULL)
 		return (-1);
@@ -239,58 +237,33 @@ BIO_get_accept_socket(char *host, int bind_mode)
 	else
 		p = h, h = NULL;
 
-	do {
-		struct addrinfo *res, hint;
-
-		/*
-		 * '::port' enforces IPv6 wildcard listener. Some OSes,
-		 * e.g. Solaris, default to IPv6 without any hint. Also
-		 * note that commonly IPv6 wildchard socket can service
-		 * IPv4 connections just as well...
-		 */
-		memset(&hint, 0, sizeof(hint));
-		hint.ai_flags = AI_PASSIVE;
-		if (h) {
-			if (strchr(h, ':')) {
-				if (h[1] == '\0')
-					h = NULL;
-				hint.ai_family = AF_INET6;
-			} else if (h[0] == '*' && h[1] == '\0') {
-				hint.ai_family = AF_INET;
+	/*
+	 * '::port' enforces IPv6 wildcard listener. Some OSes,
+	 * e.g. Solaris, default to IPv6 without any hint. Also
+	 * note that commonly IPv6 wildchard socket can service
+	 * IPv4 connections just as well...
+	 */
+	memset(&hint, 0, sizeof(hint));
+	hint.ai_flags = AI_PASSIVE;
+	if (h) {
+		if (strchr(h, ':')) {
+			if (h[1] == '\0')
 				h = NULL;
-			}
+			hint.ai_family = AF_INET6;
+		} else if (h[0] == '*' && h[1] == '\0') {
+			hint.ai_family = AF_INET;
+			h = NULL;
 		}
+	}
 
-		if (getaddrinfo(h, p, &hint, &res))
-			break;
-
-		addrlen = res->ai_addrlen <= sizeof(server) ?
-		    res->ai_addrlen : sizeof(server);
-		memcpy(&server, res->ai_addr, addrlen);
-
-		freeaddrinfo(res);
-		goto again;
-	} while (0);
-
-	if (!BIO_get_port(p, &port))
+	if (getaddrinfo(h, p, &hint, &res))
 		goto err;
 
-	memset((char *)&server, 0, sizeof(server));
-	server.sa_in.sin_family = AF_INET;
-	server.sa_in.sin_port = htons(port);
-	addrlen = sizeof(server.sa_in);
+	addrlen = res->ai_addrlen <= sizeof(server) ?
+		res->ai_addrlen : sizeof(server);
+	memcpy(&server, res->ai_addr, addrlen);
 
-	if (h == NULL || strcmp(h, "*") == 0)
-		server.sa_in.sin_addr.s_addr = INADDR_ANY;
-	else {
-		if (!BIO_get_host_ip(h, &(ip[0])))
-			goto err;
-		l = (unsigned long)((unsigned long)ip[0]<<24L)|
-		    ((unsigned long)ip[1]<<16L)|
-		    ((unsigned long)ip[2]<< 8L)|
-		    ((unsigned long)ip[3]);
-		server.sa_in.sin_addr.s_addr = htonl(l);
-	}
+	freeaddrinfo(res);
 
 again:
 	s = socket(server.sa.sa_family, SOCK_STREAM, IPPROTO_TCP);
