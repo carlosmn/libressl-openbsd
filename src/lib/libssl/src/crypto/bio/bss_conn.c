@@ -79,9 +79,6 @@ typedef struct bio_connect_st {
 	char *param_port;
 	int nbio;
 
-	unsigned char ip[4];
-	unsigned short port;
-
 	struct sockaddr_in them;
 
 	/* int socket; this will be kept in bio->num so that it is
@@ -122,9 +119,9 @@ static int
 conn_state(BIO *b, BIO_CONNECT *c)
 {
 	int ret = -1, i;
-	unsigned long l;
 	char *p, *q;
 	int (*cb)(const BIO *, int, int) = NULL;
+	struct addrinfo *res, hint;
 
 	if (c->info_callback != NULL)
 		cb = c->info_callback;
@@ -162,37 +159,20 @@ conn_state(BIO *b, BIO_CONNECT *c)
 				    c->param_hostname);
 				goto exit_loop;
 			}
-			c->state = BIO_CONN_S_GET_IP;
-			break;
 
-		case BIO_CONN_S_GET_IP:
-			if (BIO_get_host_ip(c->param_hostname, &(c->ip[0])) <= 0)
+			hint.ai_family = AF_INET;
+			/* TODO: should we set an error string? */
+			if (getaddrinfo(c->param_hostname, c->param_port, &hint, &res))
 				goto exit_loop;
-			c->state = BIO_CONN_S_GET_PORT;
-			break;
 
-		case BIO_CONN_S_GET_PORT:
-			if (c->param_port == NULL) {
-				/* abort(); */
-				goto exit_loop;
-			} else if (BIO_get_port(c->param_port, &c->port) <= 0)
-				goto exit_loop;
+			/* is it ok to assume it's going to fit here */
+			memcpy(&c->them, res->ai_addr, sizeof(struct sockaddr_in));
+			freeaddrinfo(res);
+
 			c->state = BIO_CONN_S_CREATE_SOCKET;
 			break;
 
 		case BIO_CONN_S_CREATE_SOCKET:
-			/* now setup address */
-			memset((char *)&c->them, 0, sizeof(c->them));
-			c->them.sin_family = AF_INET;
-			c->them.sin_port = htons((unsigned short)c->port);
-			l = (unsigned long)
-			    ((unsigned long)c->ip[0] << 24L)|
-			    ((unsigned long)c->ip[1] << 16L)|
-			    ((unsigned long)c->ip[2] << 8L)|
-			    ((unsigned long)c->ip[3]);
-			c->them.sin_addr.s_addr = htonl(l);
-			c->state = BIO_CONN_S_CREATE_SOCKET;
-
 			ret = socket(AF_INET, SOCK_STREAM, SOCKET_PROTOCOL);
 			if (ret == -1) {
 				SYSerr(SYS_F_SOCKET, errno);
@@ -448,9 +428,9 @@ conn_ctrl(BIO *b, int cmd, long num, void *ptr)
 			} else if (num == 1) {
 				*pptr = data->param_port;
 			} else if (num == 2) {
-				*pptr = (char *)&(data->ip[0]);
+				*pptr = (char *)&(data->them.sin_addr.s_addr);
 			} else if (num == 3) {
-				*((int *)ptr) = data->port;
+				*((int *)ptr) = data->them.sin_port;
 			}
 			if ((!b->init) || (ptr == NULL))
 				*pptr = "not initialized";
@@ -468,17 +448,20 @@ conn_ctrl(BIO *b, int cmd, long num, void *ptr)
 				data->param_port = strdup(ptr);
 			} else if (num == 2) {
 				unsigned char *p = ptr;
+				uint32_t ip = 0;
 				free(data->param_hostname);
 				if (asprintf(&data->param_hostname,
 					"%u.%u.%u.%u", p[0], p[1],
 					p[2], p[3]) == -1)
 					data->param_hostname = NULL;
-				memcpy(&(data->ip[0]), ptr, 4);
+				memcpy(&ip, ptr, sizeof(uint32_t));
+				data->them.sin_addr.s_addr = htonl(ip);
 			} else if (num == 3) {
+				int port = *(int *)ptr;
 				free(data->param_port);
-				data->port= *(int *)ptr;
+				data->them.sin_port = htons(port);
 				if (asprintf(&data->param_port, "%d",
-					data->port) == -1)
+					port) == -1)
 					data->param_port = NULL;
 			}
 		}
