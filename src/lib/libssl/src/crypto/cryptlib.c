@@ -126,8 +126,6 @@
 #include <openssl/safestack.h>
 #include <openssl/sha.h>
 
-DECLARE_STACK_OF(CRYPTO_dynlock)
-
 /* real #defines in crypto.h, keep these upto date */
 static const char* const lock_names[CRYPTO_NUM_LOCKS] = {
 	"<<ERROR>>",
@@ -180,11 +178,6 @@ static const char* const lock_names[CRYPTO_NUM_LOCKS] = {
    array of lock names.  These are numbered with positive numbers.  */
 static STACK_OF(OPENSSL_STRING) *app_locks = NULL;
 
-/* For applications that want a more dynamic way of handling threads, the
-   following stack is used.  These are externally numbered with negative
-   numbers.  */
-static STACK_OF(CRYPTO_dynlock) *dyn_locks = NULL;
-
 static void (*locking_callback)(int mode, int type,
     const char *file, int line) = 0;
 static int (*add_lock_callback)(int *pointer, int amount,
@@ -193,12 +186,6 @@ static int (*add_lock_callback)(int *pointer, int amount,
 static unsigned long (*id_callback)(void) = 0;
 #endif
 static void (*threadid_callback)(CRYPTO_THREADID *) = 0;
-static struct CRYPTO_dynlock_value *(*dynlock_create_callback)(
-    const char *file, int line) = 0;
-static void (*dynlock_lock_callback)(int mode,
-    struct CRYPTO_dynlock_value *l, const char *file, int line) = 0;
-static void (*dynlock_destroy_callback)(struct CRYPTO_dynlock_value *l,
-    const char *file, int line) = 0;
 
 int
 CRYPTO_get_new_lockid(char *name)
@@ -227,161 +214,6 @@ int
 CRYPTO_num_locks(void)
 {
 	return CRYPTO_NUM_LOCKS;
-}
-
-int
-CRYPTO_get_new_dynlockid(void)
-{
-	int i = 0;
-	CRYPTO_dynlock *pointer = NULL;
-
-	if (dynlock_create_callback == NULL) {
-		CRYPTOerr(CRYPTO_F_CRYPTO_GET_NEW_DYNLOCKID,
-		    CRYPTO_R_NO_DYNLOCK_CREATE_CALLBACK);
-		return (0);
-	}
-	CRYPTO_w_lock(CRYPTO_LOCK_DYNLOCK);
-	if ((dyn_locks == NULL) &&
-	    ((dyn_locks = sk_CRYPTO_dynlock_new_null()) == NULL)) {
-		CRYPTO_w_unlock(CRYPTO_LOCK_DYNLOCK);
-		CRYPTOerr(CRYPTO_F_CRYPTO_GET_NEW_DYNLOCKID,
-		    ERR_R_MALLOC_FAILURE);
-		return (0);
-	}
-	CRYPTO_w_unlock(CRYPTO_LOCK_DYNLOCK);
-
-	pointer = malloc(sizeof(CRYPTO_dynlock));
-	if (pointer == NULL) {
-		CRYPTOerr(CRYPTO_F_CRYPTO_GET_NEW_DYNLOCKID,
-		    ERR_R_MALLOC_FAILURE);
-		return (0);
-	}
-	pointer->references = 1;
-	pointer->data = dynlock_create_callback(__FILE__, __LINE__);
-	if (pointer->data == NULL) {
-		free(pointer);
-		CRYPTOerr(CRYPTO_F_CRYPTO_GET_NEW_DYNLOCKID,
-		    ERR_R_MALLOC_FAILURE);
-		return (0);
-	}
-
-	CRYPTO_w_lock(CRYPTO_LOCK_DYNLOCK);
-	/* First, try to find an existing empty slot */
-	i = sk_CRYPTO_dynlock_find(dyn_locks, NULL);
-	/* If there was none, push, thereby creating a new one */
-	if (i == -1)
-		/* Since sk_push() returns the number of items on the
-		   stack, not the location of the pushed item, we need
-		   to transform the returned number into a position,
-		   by decreasing it.  */
-		i = sk_CRYPTO_dynlock_push(dyn_locks, pointer) - 1;
-	else
-		/* If we found a place with a NULL pointer, put our pointer
-		   in it.  */
-		(void)sk_CRYPTO_dynlock_set(dyn_locks, i, pointer);
-	CRYPTO_w_unlock(CRYPTO_LOCK_DYNLOCK);
-
-	if (i == -1) {
-		dynlock_destroy_callback(pointer->data, __FILE__, __LINE__);
-		free(pointer);
-	} else
-		i += 1; /* to avoid 0 */
-	return -i;
-}
-
-void
-CRYPTO_destroy_dynlockid(int i)
-{
-	CRYPTO_dynlock *pointer = NULL;
-
-	if (i)
-		i = -i - 1;
-	if (dynlock_destroy_callback == NULL)
-		return;
-
-	CRYPTO_w_lock(CRYPTO_LOCK_DYNLOCK);
-
-	if (dyn_locks == NULL || i >= sk_CRYPTO_dynlock_num(dyn_locks)) {
-		CRYPTO_w_unlock(CRYPTO_LOCK_DYNLOCK);
-		return;
-	}
-	pointer = sk_CRYPTO_dynlock_value(dyn_locks, i);
-	if (pointer != NULL) {
-		--pointer->references;
-		if (pointer->references <= 0) {
-			(void)sk_CRYPTO_dynlock_set(dyn_locks, i, NULL);
-		} else
-			pointer = NULL;
-	}
-	CRYPTO_w_unlock(CRYPTO_LOCK_DYNLOCK);
-
-	if (pointer) {
-		dynlock_destroy_callback(pointer->data, __FILE__, __LINE__);
-		free(pointer);
-	}
-}
-
-struct CRYPTO_dynlock_value *
-CRYPTO_get_dynlock_value(int i)
-{
-	CRYPTO_dynlock *pointer = NULL;
-
-	if (i)
-		i = -i - 1;
-
-	CRYPTO_w_lock(CRYPTO_LOCK_DYNLOCK);
-
-	if (dyn_locks != NULL && i < sk_CRYPTO_dynlock_num(dyn_locks))
-		pointer = sk_CRYPTO_dynlock_value(dyn_locks, i);
-	if (pointer)
-		pointer->references++;
-
-	CRYPTO_w_unlock(CRYPTO_LOCK_DYNLOCK);
-
-	if (pointer)
-		return pointer->data;
-	return NULL;
-}
-
-struct CRYPTO_dynlock_value *
-(*CRYPTO_get_dynlock_create_callback(void))(const char *file, int line)
-{
-	return (dynlock_create_callback);
-}
-
-void
-(*CRYPTO_get_dynlock_lock_callback(void))(int mode,
-    struct CRYPTO_dynlock_value *l, const char *file, int line)
-{
-	return (dynlock_lock_callback);
-}
-
-void
-(*CRYPTO_get_dynlock_destroy_callback(void))(struct CRYPTO_dynlock_value *l,
-    const char *file, int line)
-{
-	return (dynlock_destroy_callback);
-}
-
-void
-CRYPTO_set_dynlock_create_callback(
-    struct CRYPTO_dynlock_value *(*func)(const char *file, int line))
-{
-	dynlock_create_callback = func;
-}
-
-void
-CRYPTO_set_dynlock_lock_callback(void (*func)(int mode,
-    struct CRYPTO_dynlock_value *l, const char *file, int line))
-{
-	dynlock_lock_callback = func;
-}
-
-void
-CRYPTO_set_dynlock_destroy_callback(
-    void (*func)(struct CRYPTO_dynlock_value *l, const char *file, int line))
-{
-	dynlock_destroy_callback = func;
 }
 
 void
@@ -551,18 +383,7 @@ CRYPTO_lock(int mode, int type, const char *file, int line)
 		    CRYPTO_get_lock_name(type), file, line);
 	}
 #endif
-	if (type < 0) {
-		if (dynlock_lock_callback != NULL) {
-			struct CRYPTO_dynlock_value *pointer =
-			    CRYPTO_get_dynlock_value(type);
-
-			OPENSSL_assert(pointer != NULL);
-
-			dynlock_lock_callback(mode, pointer, file, line);
-
-			CRYPTO_destroy_dynlockid(type);
-		}
-	} else if (locking_callback != NULL)
+	if (locking_callback != NULL)
 		locking_callback(mode, type, file, line);
 }
 
@@ -610,9 +431,7 @@ CRYPTO_add_lock(int *pointer, int amount, int type, const char *file,
 const char *
 CRYPTO_get_lock_name(int type)
 {
-	if (type < 0)
-		return("dynamic");
-	else if (type < CRYPTO_NUM_LOCKS)
+	if (type < CRYPTO_NUM_LOCKS)
 		return (lock_names[type]);
 	else if (type - CRYPTO_NUM_LOCKS > sk_OPENSSL_STRING_num(app_locks))
 		return("ERROR");
