@@ -507,6 +507,9 @@ dynamic_load(ENGINE *e, dynamic_data_ctx *ctx)
 	    &fns.mem_fns.free_cb);
 	fns.lock_fns.lock_locking_cb = CRYPTO_get_locking_callback();
 	fns.lock_fns.lock_add_lock_cb = CRYPTO_get_add_lock_callback();
+	fns.lock_fns.dynlock_create_cb = CRYPTO_get_dynlock_create_callback();
+	fns.lock_fns.dynlock_lock_cb = CRYPTO_get_dynlock_lock_callback();
+	fns.lock_fns.dynlock_destroy_cb = CRYPTO_get_dynlock_destroy_callback();
 	/* Now that we've loaded the dynamic engine, make sure no "dynamic"
 	 * ENGINE elements will show through. */
 	engine_set_all_null(e);
