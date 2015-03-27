@@ -632,9 +632,6 @@ typedef void (*dyn_dynlock_destroy_cb)(struct CRYPTO_dynlock_value *,
 typedef struct st_dynamic_LOCK_fns {
 	dyn_lock_locking_cb			lock_locking_cb;
 	dyn_lock_add_lock_cb			lock_add_lock_cb;
-	dyn_dynlock_create_cb			dynlock_create_cb;
-	dyn_dynlock_lock_cb			dynlock_lock_cb;
-	dyn_dynlock_destroy_cb			dynlock_destroy_cb;
 } dynamic_LOCK_fns;
 /* The top-level structure */
 typedef struct st_dynamic_fns {
@@ -642,7 +639,7 @@ typedef struct st_dynamic_fns {
 	const ERR_FNS				*err_fns;
 	const CRYPTO_EX_DATA_IMPL		*ex_data_fns;
 	dynamic_MEM_fns				mem_fns;
-	dynamic_LOCK_fns			lock_fns;
+	dynamic_LOCK_fns                        lock_fns;
 } dynamic_fns;
 
 /* The version checking function should be of this prototype. NB: The

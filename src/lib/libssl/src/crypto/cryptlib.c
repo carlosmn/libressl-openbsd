@@ -178,11 +178,6 @@ static const char* const lock_names[CRYPTO_NUM_LOCKS] = {
    array of lock names.  These are numbered with positive numbers.  */
 static STACK_OF(OPENSSL_STRING) *app_locks = NULL;
 
-/* For applications that want a more dynamic way of handling threads, the
-   following stack is used.  These are externally numbered with negative
-   numbers.  */
-static STACK_OF(CRYPTO_dynlock) *dyn_locks = NULL;
-
 static void (*locking_callback)(int mode, int type,
     const char *file, int line) = 0;
 static int (*add_lock_callback)(int *pointer, int amount,
@@ -388,18 +383,7 @@ CRYPTO_lock(int mode, int type, const char *file, int line)
 		    CRYPTO_get_lock_name(type), file, line);
 	}
 #endif
-	if (type < 0) {
-		if (dynlock_lock_callback != NULL) {
-			struct CRYPTO_dynlock_value *pointer =
-			    CRYPTO_get_dynlock_value(type);
-
-			OPENSSL_assert(pointer != NULL);
-
-			dynlock_lock_callback(mode, pointer, file, line);
-
-			CRYPTO_destroy_dynlockid(type);
-		}
-	} else if (locking_callback != NULL)
+	if (locking_callback != NULL)
 		locking_callback(mode, type, file, line);
 }
 
