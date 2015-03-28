@@ -60,7 +60,6 @@
 
 #include <openssl/lhash.h>
 #include <openssl/objects.h>
-#include <openssl/crypto.h>
 
 #include "ssl_locl.h"
 
@@ -125,7 +124,6 @@ SSL_library_init(void)
 	EVP_add_digest(EVP_streebog256());
 	EVP_add_digest(EVP_streebog512());
 #endif
-	CRYPTO_locks_init();
 	/* initialize cipher/digest methods table */
 	ssl_load_ciphers();
 	return (1);

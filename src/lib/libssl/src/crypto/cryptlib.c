@@ -178,8 +178,20 @@ static const char* const lock_names[CRYPTO_NUM_LOCKS] = {
 #endif
 };
 
+/* This may just be slightly less ugly than a 41-element initializer */
+#define MUTEX_INIT   PTHREAD_MUTEX_INITIALIZER
+#define MUTEX_INIT2  PTHREAD_MUTEX_INITIALIZER, PTHREAD_MUTEX_INITIALIZER
+#define MUTEX_INIT5  MUTEX_INIT, MUTEX_INIT2, MUTEX_INIT2
+#define MUTEX_INIT10 MUTEX_INIT5, MUTEX_INIT5
+
 /* This is for our own locks */
-static pthread_rwlock_t locks[CRYPTO_NUM_LOCKS];
+static pthread_mutex_t locks[CRYPTO_NUM_LOCKS] = {
+	MUTEX_INIT10,
+	MUTEX_INIT10,
+	MUTEX_INIT10,
+	MUTEX_INIT10,
+	MUTEX_INIT,
+};
 
 /* This is for applications to allocate new type names in the non-dynamic
    array of lock names.  These are numbered with positive numbers.  */
@@ -413,21 +425,6 @@ CRYPTO_set_add_lock_callback(int (*func)(int *num, int mount, int type,
 	/* NOP */
 }
 
-int
-CRYPTO_locks_init(void)
-{
-	int i, err;
-
-	for (i = 0; i < CRYPTO_NUM_LOCKS; i++) {
-		/* FIXME: how do we report errors here? */
-		if (!(err = pthread_rwlock_init(&locks[i], NULL))) {
-			return err;
-		}
-	}
-
-	return 0;
-}
-
 /* the memset() here and in set_pointer() seem overkill, but for the sake of
  * CRYPTO_THREADID_cmp() this avoids any platform silliness that might cause two
  * "equal" THREADID structs to not be memcmp()-identical. */
@@ -578,21 +575,13 @@ CRYPTO_lock(int mode, int type, const char *file, int line)
 		return;
 	}
 
-	switch (mode) {
-		case CRYPTO_LOCK | CRYPTO_READ:
-			pthread_rwlock_rdlock(&locks[type]);
-			break;
-		case CRYPTO_LOCK | CRYPTO_WRITE:
-			pthread_rwlock_wrlock(&locks[type]);
-			break;
-		case CRYPTO_UNLOCK | CRYPTO_READ:
-		case CRYPTO_UNLOCK | CRYPTO_WRITE:
-			pthread_rwlock_unlock(&locks[type]);
-			break;
-		default:
-			abort();
+	if (mode & CRYPTO_LOCK) {
+		pthread_mutex_lock(&locks[type]);
+	} else if (mode & CRYPTO_UNLOCK) {
+		pthread_mutex_unlock(&locks[type]);
+	} else {
+		abort();
 	}
-
 }
 
 int
