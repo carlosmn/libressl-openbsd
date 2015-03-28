@@ -179,18 +179,17 @@ static const char* const lock_names[CRYPTO_NUM_LOCKS] = {
 };
 
 /* This may just be slightly less ugly than a 41-element initializer */
-#define MUTEX_INIT   PTHREAD_MUTEX_INITIALIZER
-#define MUTEX_INIT2  PTHREAD_MUTEX_INITIALIZER, PTHREAD_MUTEX_INITIALIZER
-#define MUTEX_INIT5  MUTEX_INIT, MUTEX_INIT2, MUTEX_INIT2
-#define MUTEX_INIT10 MUTEX_INIT5, MUTEX_INIT5
+#define RWLOCK_INIT   PTHREAD_RWLOCK_INITIALIZER
+#define RWLOCK_INIT5  RWLOCK_INIT, RWLOCK_INIT, RWLOCK_INIT, RWLOCK_INIT, RWLOCK_INIT
+#define RWLOCK_INIT10 RWLOCK_INIT5, RWLOCK_INIT5
 
 /* This is for our own locks */
-static pthread_mutex_t locks[CRYPTO_NUM_LOCKS] = {
-	MUTEX_INIT10,
-	MUTEX_INIT10,
-	MUTEX_INIT10,
-	MUTEX_INIT10,
-	MUTEX_INIT,
+static pthread_rwlock_t locks[CRYPTO_NUM_LOCKS] = {
+	RWLOCK_INIT10,
+	RWLOCK_INIT10,
+	RWLOCK_INIT10,
+	RWLOCK_INIT10,
+	RWLOCK_INIT,
 };
 
 /* This is for applications to allocate new type names in the non-dynamic
@@ -575,12 +574,22 @@ CRYPTO_lock(int mode, int type, const char *file, int line)
 		return;
 	}
 
-	if (mode & CRYPTO_LOCK) {
-		pthread_mutex_lock(&locks[type]);
-	} else if (mode & CRYPTO_UNLOCK) {
-		pthread_mutex_unlock(&locks[type]);
-	} else {
-		abort();
+	switch (mode) {
+		case CRYPTO_LOCK | CRYPTO_READ:
+			printf("locking for reading %s\n", CRYPTO_get_lock_name(type));
+			pthread_rwlock_rdlock(&locks[type]);
+			break;
+		case CRYPTO_LOCK | CRYPTO_WRITE:
+			printf("locking for writing %s\n", CRYPTO_get_lock_name(type));
+			pthread_rwlock_wrlock(&locks[type]);
+			break;
+		case CRYPTO_UNLOCK | CRYPTO_READ:
+		case CRYPTO_UNLOCK | CRYPTO_WRITE:
+			printf("unlocking %s\n", CRYPTO_get_lock_name(type));
+			pthread_rwlock_unlock(&locks[type]);
+			break;
+		default:
+			abort();
 	}
 }
 
