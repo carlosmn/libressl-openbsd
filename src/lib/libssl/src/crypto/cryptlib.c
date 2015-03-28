@@ -535,6 +535,31 @@ CRYPTO_thread_id(void)
 void
 CRYPTO_lock(int mode, int type, const char *file, int line)
 {
+#ifdef LOCK_DEBUG
+	{
+		CRYPTO_THREADID id;
+		char *rw_text, *operation_text;
+
+		if (mode & CRYPTO_LOCK)
+			operation_text = "lock  ";
+		else if (mode & CRYPTO_UNLOCK)
+			operation_text = "unlock";
+		else
+			operation_text = "ERROR ";
+
+		if (mode & CRYPTO_READ)
+			rw_text = "r";
+		else if (mode & CRYPTO_WRITE)
+			rw_text = "w";
+		else
+			rw_text = "ERROR";
+
+		CRYPTO_THREADID_current(&id);
+		fprintf(stderr, "lock:%08lx:(%s)%s %-18s %s:%d\n",
+		    CRYPTO_THREADID_hash(&id), rw_text, operation_text,
+		    CRYPTO_get_lock_name(type), file, line);
+	}
+#endif
 	if (type < 0) {
 		if (dynlock_lock_callback != NULL) {
 			struct CRYPTO_dynlock_value *pointer =
