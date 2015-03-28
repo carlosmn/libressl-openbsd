@@ -414,7 +414,7 @@ CRYPTO_set_add_lock_callback(int (*func)(int *num, int mount, int type,
 }
 
 int
-CRYPTO_init(void)
+CRYPTO_locks_init(void)
 {
 	int i, err;
 
@@ -585,7 +585,8 @@ CRYPTO_lock(int mode, int type, const char *file, int line)
 		case CRYPTO_LOCK | CRYPTO_WRITE:
 			pthread_rwlock_wrlock(&locks[type]);
 			break;
-		case CRYPTO_UNLOCK:
+		case CRYPTO_UNLOCK | CRYPTO_READ:
+		case CRYPTO_UNLOCK | CRYPTO_WRITE:
 			pthread_rwlock_unlock(&locks[type]);
 			break;
 		default:

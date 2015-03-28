@@ -125,7 +125,7 @@ SSL_library_init(void)
 	EVP_add_digest(EVP_streebog256());
 	EVP_add_digest(EVP_streebog512());
 #endif
-	CRYPTO_init();
+	CRYPTO_locks_init();
 	/* initialize cipher/digest methods table */
 	ssl_load_ciphers();
 	return (1);
