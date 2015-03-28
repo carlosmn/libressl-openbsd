@@ -26,7 +26,7 @@ CFLAGS+= -I${LCRYPTO_SRC}
 CFLAGS+= -I${LCRYPTO_SRC}/modes -I${LCRYPTO_SRC}/asn1 -I${LCRYPTO_SRC}/evp
 
 # crypto/
-SRCS+= cryptlib.c malloc-wrapper.c mem_dbg.c cversion.c ex_data.c cpt_err.c
+SRCS+= cryptlib.c pthread_stub.c  malloc-wrapper.c mem_dbg.c cversion.c ex_data.c cpt_err.c
 SRCS+= uid.c o_time.c o_str.c o_init.c
 SRCS+= mem_clr.c
 

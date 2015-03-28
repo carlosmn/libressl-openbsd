@@ -10,6 +10,9 @@ _CRYPTO_zero_stub()
 	return 0;
 }
 
-WEAK_ALIAS(int _pthread_rwlock_init(pthread_rwlock_t *restrict rwlock, const pthread_rwlockattr_t *restrict attr), _CRYPTO_zero_stub);
+WEAK_ALIAS(int pthread_rwlock_init(pthread_rwlock_t *, const pthread_rwlockattr_t *), _CRYPTO_zero_stub);
+WEAK_ALIAS(int pthread_rwlock_rdlock(pthread_rwlock_t *), _CRYPTO_zero_stub);
+WEAK_ALIAS(int pthread_rwlock_wrlock(pthread_rwlock_t *), _CRYPTO_zero_stub);
+WEAK_ALIAS(int pthread_rwlock_unlock(pthread_rwlock_t *), _CRYPTO_zero_stub);
 
 #endif
